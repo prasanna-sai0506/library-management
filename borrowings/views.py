@@ -9,7 +9,7 @@ from datetime import timedelta
 from .models import Borrowing
 from books.models import Book
 from .serializers import BorrowingSerializer
-from users.permissions import IsAdminOrOwner
+from users.permissions import IsAdminOnly, IsAdminOrOwner
 
 
 class BorrowingListCreateAPIView(generics.ListCreateAPIView):
@@ -70,7 +70,7 @@ class BorrowingDetailAPIView(generics.RetrieveAPIView):
 class BorrowingReturnAPIView(generics.GenericAPIView):
     queryset = Borrowing.objects.all()
     serializer_class = BorrowingSerializer
-    permission_classes = [permissions.IsAuthenticated, IsAdminOrOwner]
+    permission_classes = [permissions.IsAuthenticated, IsAdminOnly]
 
     @transaction.atomic
     def post(self, request, pk=None):

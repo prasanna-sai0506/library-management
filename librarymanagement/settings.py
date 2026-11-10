@@ -115,3 +115,24 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+# librarymanagement/settings.py
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+    'DEFAULT_FILTER_BACKENDS': (
+        'django_filters.rest_framework.DjangoFilterBackend',
+    ),
+}
+
+# librarymanagement/settings.py
+from datetime import timedelta
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(hours=24),      # Change access token duration (e.g., 1 day)
+    'REFRESH_TOKEN_LIFETIME': timedelta(hours=48),     # Change refresh token duration (e.g., 7 days)
+    'AUTH_HEADER_TYPES': ('Bearer',),
+
+}
