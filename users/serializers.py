@@ -1,10 +1,7 @@
-# users/serializers.py
 from rest_framework import serializers
 from .models import User
-
 class UserRegistrationSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
-
     class Meta:
         model = User
         fields = ['id', 'username', 'email', 'password', 'role', 'credits']
@@ -16,8 +13,6 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         user.set_password(password)
         user.save()
         return user
-
-
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User

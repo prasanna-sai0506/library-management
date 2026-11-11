@@ -35,10 +35,8 @@ class IsAdminOrOwner(permissions.BasePermission):
     Allows general access to authenticated users, but object-level permissions 
     restrict modifications/views to the record owner or admins.
     """
-    def has_permission(self, request, view):
-        if request.user and request.user.is_authenticated:
-            return True
-        return False
+    def has_permission(self, request, view): 
+        return bool(request.user and request.user.is_authenticated)
 
     def has_object_permission(self, request, view, obj):
         if not request.user or not request.user.is_authenticated:

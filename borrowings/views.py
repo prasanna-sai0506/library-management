@@ -6,6 +6,7 @@ from django.db import transaction
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from datetime import timedelta
+from decimal import Decimal
 from .models import Borrowing
 from books.models import Book
 from .serializers import BorrowingSerializer
@@ -41,10 +42,13 @@ class BorrowingListCreateAPIView(generics.ListCreateAPIView):
         if book.available_copies <= 0 or book.availability == "UNAVAILABLE":
             return Response({"error": "No copies available for this book."}, status=status.HTTP_400_BAD_REQUEST)
 
-        if user.credits < book.borrowing_cost:
+        user_credits = Decimal(str(user.credits))
+        borrowing_cost = Decimal(str(book.borrowing_cost))
+
+        if user_credits < borrowing_cost:
             return Response({"error": "Insufficient credits to borrow this book."}, status=status.HTTP_400_BAD_REQUEST)
 
-        user.credits -= book.borrowing_cost
+        user.credits = user_credits - borrowing_cost
         user.save()
 
         book.available_copies -= 1

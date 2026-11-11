@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 from decimal import Decimal
+from celery.schedules import crontab
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -135,4 +136,18 @@ SIMPLE_JWT = {
     'REFRESH_TOKEN_LIFETIME': timedelta(hours=48),     # Change refresh token duration (e.g., 7 days)
     'AUTH_HEADER_TYPES': ('Bearer',),
 
+}
+
+# Celery Broker and Backend Configuration
+CELERY_BROKER_URL = 'redis://localhost:6379/0'
+CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+CELERY_TIMEZONE = TIME_ZONE
+
+# Celery Beat Periodic Tasks Schedule
+CELERY_BEAT_SCHEDULE = {
+    'increase-credits-daily': {
+        'task': 'users.tasks.increase_daily_credits',
+        'schedule': crontab(hour=0, minute=0),  # Runs every day at 12:00 AM midnight
+        # Alternatively, for testing every minute: schedule=crontab(minute='*')
+    },
 }

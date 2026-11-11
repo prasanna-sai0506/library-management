@@ -5,8 +5,17 @@ name = "pypi"
 
 [packages]
 mysqlclient = "*"
+celery = "*"
+redis = "*"
+pytest = "*"
+locust = "*"
+baker = "*"
+model-bakery = "*"
 
 [dev-packages]
+pytest-django = "*"
+pytest = "*"
+model-bakery = "*"
 
 [requires]
 python_version = "3.14"
