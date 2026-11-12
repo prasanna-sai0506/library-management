@@ -8,9 +8,9 @@ mysqlclient = "*"
 celery = "*"
 redis = "*"
 pytest = "*"
-locust = "*"
 baker = "*"
 model-bakery = "*"
+locust = "*"
 
 [dev-packages]
 pytest-django = "*"

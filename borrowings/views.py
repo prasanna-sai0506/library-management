@@ -34,7 +34,7 @@ class BorrowingListCreateAPIView(generics.ListCreateAPIView):
         book_id = request.data.get('book')
         user = request.user
 
-        if user.role != user.MEMBER and not user.is_staff:
+        if user.role != user.MEMBER or user.is_staff:
             return Response({"error": "Only members can borrow books."}, status=status.HTTP_403_FORBIDDEN)
 
         book = get_object_or_404(Book, id=book_id)

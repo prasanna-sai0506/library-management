@@ -5,11 +5,11 @@ class IsAdminOrReadOnly(permissions.BasePermission):
     Allows read-only access (GET, HEAD, OPTIONS) to authenticated users.
     Mutations (POST, PUT, PATCH, DELETE) require ADMIN or staff status.
     """
-    def has_permission(self, request, view):
-        if not request.user or not request.user.is_authenticated:
+    def has_permission(self, request, view):       
+        if not request.user or not request.user.is_authenticated:  
             return False
-
-        if request.method in permissions.SAFE_METHODS:
+     
+        if request.method in permissions.SAFE_METHODS:    
             return True
 
         if request.user.is_staff or request.user.role == request.user.ADMIN:
