@@ -15,7 +15,7 @@ class Book(models.Model):
     available_copies = models.PositiveIntegerField(default=1)
     availability = models.CharField(max_length=20, choices=AVAILABILITY_CHOICES, default=AVAILABLE)
     borrowing_cost = models.DecimalField(max_digits=6, decimal_places=2, default=Decimal('5.00'))
-    borrowing_period = models.PositiveIntegerField(default=14)  # in days
+    borrowing_period = models.PositiveIntegerField(default=7)  # in days
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

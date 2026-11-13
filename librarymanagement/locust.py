@@ -1,5 +1,8 @@
+import os
 import random
 import uuid
+
+import django
 from locust import HttpUser, between, task
 from locust.exception import StopUser
 
@@ -21,17 +24,17 @@ class LibraryUser(HttpUser):
 
     def on_start(self):
         self.book_ids = []
+        self.username = f"loadtest_{uuid.uuid4().hex[:12]}"
         self._create_and_authenticate_member()
 
     def _create_and_authenticate_member(self):
-        username = f"loadtest_{uuid.uuid4().hex[:12]}"
         password = f"LoadTest-{uuid.uuid4().hex}!"
 
         registration = self.client.post(
             "/auth/users/register/",
             json={
-                "username": username,
-                "email": f"{username}@example.test",
+                "username": self.username,
+                "email": f"{self.username}@example.test",
                 "password": password,
             },
             name="/auth/users/register/",
@@ -46,10 +49,11 @@ class LibraryUser(HttpUser):
 
         login = self.client.post(
             "/auth/users/login/",
-            json={"username": username, "password": password},
+            json={"username": self.username, "password": password},
             name="/auth/users/login/",
         )
         if login.status_code != 200:
+            self._delete_test_user()
             raise StopUser(f"Load-test login failed: {login.status_code}")
 
         access_token = login.json().get("access")
@@ -57,6 +61,16 @@ class LibraryUser(HttpUser):
             raise StopUser("Load-test login did not return an access token")
 
         self.client.headers.update({"Authorization": f"Bearer {access_token}"})
+
+    def on_stop(self):
+        self._delete_test_user()
+
+    def _delete_test_user(self):
+        os.environ.setdefault("DJANGO_SETTINGS_MODULE", "librarymanagement.settings")
+        django.setup()
+        from users.models import User
+
+        User.objects.filter(username=self.username).delete()
 
     @staticmethod
     def _books_from_response(response):
