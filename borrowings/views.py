@@ -22,7 +22,6 @@ class BorrowingListCreateAPIView(generics.ListCreateAPIView):
     search_fields = ['book__title', 'user__username']
     ordering_fields = ['borrowed_at', 'due_date', 'returned_at']
     ordering = ['-borrowed_at']
-
     def get_queryset(self):
         user = self.request.user
         if user.is_staff or user.role == user.ADMIN:
@@ -78,30 +77,22 @@ class BorrowingReturnAPIView(generics.GenericAPIView):
 
     @transaction.atomic
     def post(self, request, pk=None):
-        # 1. Fetch borrowing record safely using get_object_or_404
         borrowing = get_object_or_404(Borrowing, pk=pk)
-        
-        # Enforce object-level permission check
-        self.check_object_permissions(request, borrowing)
+        self.check_object_permissions(request, borrowing)  #check the borrowing belongs to the login user
 
         if borrowing.status == Borrowing.RETURNED:
             return Response({"error": "This book has already been returned."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Calculate late fee & update borrowing record
-        return_time = timezone.now()
+        return_time = timezone.now()      # Calculate late fee & update borrowing record
         late_fee = borrowing.calculate_late_fee(return_time)
         borrowing.returned_at = return_time
         borrowing.late_fee = late_fee
         borrowing.status = Borrowing.RETURNED
         borrowing.save()
-        
-        # 2. Atomically increment available copies using F() expression
-        Book.objects.filter(pk=borrowing.book.pk).update(available_copies=F('available_copies') + 1)
-        # 3. Ensure availability status updates back to AVAILABLE if copies > 0
-        Book.objects.filter(pk=borrowing.book.pk, available_copies__gt=0).update(availability=Book.AVAILABLE)
+        Book.objects.filter(pk=borrowing.book.pk).update(available_copies=F('available_copies') + 1) # increment copies
+        Book.objects.filter(pk=borrowing.book.pk, available_copies__gt=0).update(availability=Book.AVAILABLE) # update available copies
 
-        # 4. Deduct late fee from user credits if applicable
-        if late_fee > 0:
+        if late_fee > 0:           # Deduct late fee from user credits if applicable
             borrowing.user.credits -= late_fee
             borrowing.user.save()
 

@@ -1,4 +1,3 @@
-# borrowings/serializers.py
 from rest_framework import serializers
 from .models import Borrowing
 from books.serializers import BookSerializer

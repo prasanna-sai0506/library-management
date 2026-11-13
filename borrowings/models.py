@@ -27,12 +27,25 @@ class Borrowing(models.Model):
         return f"{self.user.username} borrowed {self.book.title} [{self.status}]"
 
     def calculate_late_fee(self, return_time=None):
+    
         if not return_time:
             return_time = timezone.now()
-            
-        if return_time > self.due_date:
-            overdue_days = (return_time - self.due_date).days
-            if overdue_days > 0:
-                return Decimal(str(overdue_days * 1.00))
-                
-        return Decimal('0.00')
+
+        if return_time <= self.due_date:
+            return Decimal("0.00")
+        overdue_days = (return_time - self.due_date).days
+
+        if overdue_days <= 0:
+            overdue_days = 1
+
+        daily_charge = (self.credits_spent / Decimal(self.borrowing_period))
+
+        if overdue_days <= 7:
+            late_fee = daily_charge * overdue_days
+
+        else:
+            first_seven_days = daily_charge * 7
+            extra_days = overdue_days - 7
+            discounted_charge = (daily_charge * Decimal("0.50") * extra_days)
+            late_fee = first_seven_days + discounted_charge
+        return late_fee.quantize(Decimal("0.01"))
