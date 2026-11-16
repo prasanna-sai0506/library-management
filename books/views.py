@@ -3,12 +3,10 @@ from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
-
 from users.permissions import IsAdminOrReadOnly, is_library_staff
-
+from librarymanagement.pagination import DefaultPagination
 from .models import Book
 from .serializers import BookMemberSerializer, BookSerializer
-
 
 class BookAPIView(APIView):
     permission_classes = [IsAdminOrReadOnly]
@@ -34,10 +32,10 @@ class BookAPIView(APIView):
         if availability:
             books = books.filter(availability=availability)
         if search:
-            books = books.filter(
-                Q(title__icontains=search)
-                | Q(author__icontains=search)
-                | Q(isbn__icontains=search)
+            books = books.filter( \
+                Q(title__icontains=search)\
+                | Q(author__icontains=search)\
+                | Q(isbn__icontains=search)\
             )
         if name:
             books = books.filter(title__icontains=name)
@@ -47,22 +45,21 @@ class BookAPIView(APIView):
             if field.lstrip('-') in self.allowed_ordering_fields
         ]
         books = books.order_by(*(ordering_fields or ['title']))
-
-        return Response([
-            self.book_data(book, request) for book in books
+        paginator = DefaultPagination()
+        page = paginator.paginate_queryset(books, request, view=self)
+        return paginator.get_paginated_response([
+            self.book_data(book, request) for book in page
         ])
 
     def post(self, request):
-        serializer = BookSerializer(
-            data=request.data,
-        )
+        serializer = BookSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         total_copies = serializer.validated_data.get('total_copies', 1)
-        serializer.save(
-            available_copies=total_copies,
-            availability=(
-                Book.AVAILABLE if total_copies > 0 else Book.UNAVAILABLE
-            ),
+        serializer.save( 
+            available_copies=total_copies, \
+            availability=( \
+                Book.AVAILABLE if total_copies > 0 else Book.UNAVAILABLE \
+            )
         )
         return Response(self.book_data(serializer.instance, request),status=status.HTTP_201_CREATED)
 

@@ -26,6 +26,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_simplejwt',
     'django_filters',
+    'debug_toolbar',
 
     # Your Apps
     'users',
@@ -48,6 +49,7 @@ MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
+    'debug_toolbar.middleware.DebugToolbarMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
@@ -55,6 +57,8 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = 'librarymanagement.urls'
+
+INTERNAL_IPS = ['127.0.0.1', 'localhost']
 
 TEMPLATES = [
     {
@@ -126,6 +130,10 @@ REST_FRAMEWORK = {
     'DEFAULT_FILTER_BACKENDS': (
         'django_filters.rest_framework.DjangoFilterBackend',
     ),
+    'DEFAULT_PAGINATION_CLASS': (
+        'librarymanagement.pagination.DefaultPagination'
+    ),
+    'PAGE_SIZE': 10,
 }
 
 

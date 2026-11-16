@@ -38,11 +38,10 @@ export const api = {
   books: (query = '') => request(`/library/books/${query}`),
   createBook: (data) => request('/library/books/', { method: 'POST', body: JSON.stringify(data) }),
   updateBook: (id, data) => request(`/library/books/?id=${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
-  borrowings: () => request('/api/borrowings/'),
+  borrowings: (query = '') => request(`/api/borrowings/${query}`),
   borrow: (book, borrowingPeriod) => request('/api/borrowings/', { method: 'POST', body: JSON.stringify({ book, borrowing_period: Number(borrowingPeriod) }) }),
   returnBook: (id) => request(`/api/borrowings/return/?id=${id}`, { method: 'POST' }),
   createLibrarian: (data) => request('/auth/users/create-librarian/', { method: 'POST', body: JSON.stringify(data) }),
   users: () => request('/auth/users/users-list/'),
-  user: (id) => request(`/auth/users/users-list/${id}/`),
-  userBorrowings: (id) => request(`/auth/users/users-list/borrowings/?user_id=${id}`),
+  userBorrowings: (id) => request(`/api/borrowings/?user_id=${id}`),
 }

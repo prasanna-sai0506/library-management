@@ -1,10 +1,9 @@
 from rest_framework import permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from borrowings.models import Borrowing
-from borrowings.serializers import BorrowingSerializer
 from .models import User
 from .permissions import IsLibrarianOnly
+from librarymanagement.pagination import DefaultPagination
 from .serializers import (
     UserProfileSerializer,
     UserRegistrationSerializer,
@@ -32,11 +31,7 @@ class UserProfileView(APIView):
         return Response(serializer.data)
 
     def patch(self, request):
-        serializer = UserProfileSerializer(
-            request.user,
-            data=request.data,
-            partial=True,
-        )
+        serializer = UserProfileSerializer(request.user,data=request.data,partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data)
@@ -58,14 +53,7 @@ class LibrarianUserListView(APIView):
         users = User.objects.all().order_by('username')
         if user_id:
             users = users.filter(id=user_id)
-        return Response(UserSerializer(users, many=True).data)
+        paginator = DefaultPagination()
+        page = paginator.paginate_queryset(users, request, view=self)
+        return paginator.get_paginated_response(UserSerializer(page, many=True).data)
 
-class LibrarianUserBorrowingsView(APIView):
-    permission_classes = [IsLibrarianOnly]
-
-    def get(self, request):
-        user_id = request.query_params.get('user_id')
-        if not user_id:
-            return Response({'error': 'The user_id query parameter is required.'},status=status.HTTP_400_BAD_REQUEST,)
-        borrowings = Borrowing.objects.filter(user_id=user_id).select_related('user', 'book').order_by('-borrowed_at')
-        return Response(BorrowingSerializer(borrowings, many=True, context={'request': request}).data)

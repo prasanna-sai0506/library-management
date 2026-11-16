@@ -1,12 +1,6 @@
 from django.urls import path
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
-from .views import (
-    RegisterView,
-    UserProfileView,
-    LibrarianCreateView,
-    LibrarianUserListView,
-    LibrarianUserBorrowingsView,
-)
+from .views import RegisterView,UserProfileView,LibrarianCreateView,LibrarianUserListView
 
 
 urlpatterns = [
@@ -16,5 +10,4 @@ urlpatterns = [
     path('profile/', UserProfileView.as_view(), name='user-profile'),
     path('create-librarian/', LibrarianCreateView.as_view(), name='create-librarian'),
     path('users-list/', LibrarianUserListView.as_view(), name='librarian-user-list'),
-    path('users-list/borrowings/', LibrarianUserBorrowingsView.as_view(), name='librarian-user-borrowings'),
 ]

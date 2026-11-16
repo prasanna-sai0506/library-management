@@ -34,38 +34,34 @@ class BorrowingCreateSerializer(serializers.ModelSerializer):
         attrs.setdefault('borrowing_period', book.borrowing_period)
         return attrs
 
-    @transaction.atomic
     def create(self, validated_data):
-        user = User.objects.select_for_update().get(
-            pk=self.context['request'].user.pk
-        )
-        book = Book.objects.select_for_update().get(
-            pk=validated_data['book'].pk
-        )
-        borrowing_period = validated_data['borrowing_period']
-        borrowing_cost = Decimal(str(book.borrowing_cost))
-        if book.available_copies <= 0 or user.credits < borrowing_cost:
-            raise serializers.ValidationError(
-                {'book': 'The book is no longer available to borrow.'}
-            )
+        with transaction.atomic():
+            user = User.objects.select_for_update().get(pk=self.context['request'].user.pk)
+            book = Book.objects.select_for_update().get(pk=validated_data['book'].pk)
+            borrowing_period = validated_data['borrowing_period']
+            borrowing_cost = Decimal(str(book.borrowing_cost))
+            if book.available_copies <= 0 or user.credits < borrowing_cost:
+                raise serializers.ValidationError({'book': 'The book is no longer available to borrow.'})
 
-        user.credits -= borrowing_cost
-        user.save(update_fields=['credits'])
-        book.available_copies -= 1
-        if book.available_copies == 0:
-            book.availability = Book.UNAVAILABLE
-        book.save(update_fields=['available_copies', 'availability'])
-        return Borrowing.objects.create(
-            user=user,
-            book=book,
-            credits_spent=book.borrowing_cost,
-            borrowing_period=borrowing_period,
-            due_date=timezone.now() + timedelta(days=borrowing_period),
-        )
+            user.credits -= borrowing_cost
+            user.save(update_fields=['credits'])
+            book.available_copies -= 1
+            
+            if book.available_copies == 0:
+                book.availability = Book.UNAVAILABLE
+                
+            book.save(update_fields=['available_copies', 'availability'])
+            return Borrowing.objects.create(
+                user=user, \
+                book=book, \
+                credits_spent=book.borrowing_cost, \
+                borrowing_period=borrowing_period, \
+                due_date=timezone.now() + timedelta(days=borrowing_period) \
+            )
 
 class BorrowingSerializer(serializers.ModelSerializer):
     book_details = serializers.SerializerMethodField()
-
+    
     class Meta:
         model = Borrowing
         fields = ['id','user','book','book_details','borrowed_at',\
@@ -75,9 +71,9 @@ class BorrowingSerializer(serializers.ModelSerializer):
 
     def get_book_details(self, borrowing):
         request = self.context.get('request')
-        serializer_class = (
-            BookSerializer
-            if request and is_library_staff(request.user)
-            else BookMemberSerializer
-        )
+        if request and is_library_staff(request.user):
+            serializer_class = (BookSerializer)
+        else:
+            serializer_class = (BookMemberSerializer)
+        
         return serializer_class(borrowing.book).data

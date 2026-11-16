@@ -65,14 +65,16 @@ function Feature({ icon, number, title, text }) { return <article className="fea
 
 function ProfilePage({ user, onUpdated }) {
   const [profile, setProfile] = useState(user)
-  const [form, setForm] = useState({ username: user.username, email: user.email || '', password: '' })
+  const [form, setForm] = useState({ username: user.username, first_name: user.first_name || '', last_name: user.last_name || '', email: user.email || '', password: '' })
+  const [history, setHistory] = useState([])
   const [message, setMessage] = useState('')
   const [busy, setBusy] = useState(false)
 
   useEffect(() => {
-    api.profile().then(updated => {
+    Promise.all([api.profile(), api.borrowings()]).then(([updated, borrowings]) => {
       setProfile(updated)
-      setForm({ username: updated.username, email: updated.email || '', password: '' })
+      setForm({ username: updated.username, first_name: updated.first_name || '', last_name: updated.last_name || '', email: updated.email || '', password: '' })
+      setHistory(Array.isArray(borrowings) ? borrowings : borrowings.results || [])
       onUpdated(updated)
     }).catch(e => setMessage(e.message))
   }, [])
@@ -81,13 +83,13 @@ function ProfilePage({ user, onUpdated }) {
     event.preventDefault()
     setBusy(true)
     setMessage('')
-    const data = { username: form.username, email: form.email }
+    const data = { username: form.username, first_name: form.first_name, last_name: form.last_name, email: form.email }
     if (form.password) data.password = form.password
     try {
       const updated = await api.updateProfile(data)
       setProfile(updated)
       onUpdated(updated)
-      setForm({ username: updated.username, email: updated.email || '', password: '' })
+      setForm({ username: updated.username, first_name: updated.first_name || '', last_name: updated.last_name || '', email: updated.email || '', password: '' })
       setMessage('Profile updated successfully.')
     } catch (e) {
       setMessage(e.message)
@@ -96,7 +98,7 @@ function ProfilePage({ user, onUpdated }) {
     }
   }
 
-  return <main className="page"><div className="page-intro"><div><p className="eyebrow">Your account</p><h1>Personal <em>details.</em></h1><p>Update your account information without signing in again.</p></div></div><section className="panel profile-panel"><div className="panel-heading"><div><p className="eyebrow">Profile</p><h2>{profile.username}</h2></div><span className="role-badge">{isLibraryStaff(profile) ? 'Librarian' : 'Member'}</span></div><form className="admin-form" onSubmit={submit}><label>Username<input required value={form.username} onChange={e => setForm({ ...form, username: e.target.value })} /></label><label>Email address<input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} /></label><label>New password<input type="password" minLength="8" placeholder="Leave blank to keep current password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} /></label><div className="profile-readonly"><span>Role: {profile.role}</span><span>Credits: {profile.credits}</span><span>Credits spent: {profile.total_credits_spent || '0.00'}</span></div><button disabled={busy} className="button button-dark">{busy ? 'Saving…' : 'Save changes'} <ArrowRight size={15} /></button></form>{message && <p className={message.includes('successfully') ? 'success-message' : 'form-error'}>{message}</p>}</section></main>
+  return <main className="page"><div className="page-intro"><div><p className="eyebrow">Your account</p><h1>Personal <em>details.</em></h1><p>Update your account information without signing in again.</p></div></div><div className="profile-grid"><section className="panel profile-panel"><div className="panel-heading"><div><p className="eyebrow">Profile</p><h2>{profile.username}</h2></div><span className="role-badge">{isLibraryStaff(profile) ? 'Librarian' : 'Member'}</span></div><form className="profile-form" onSubmit={submit}><label>Username<input required value={form.username} onChange={e => setForm({ ...form, username: e.target.value })} /></label><label>First name<input value={form.first_name} onChange={e => setForm({ ...form, first_name: e.target.value })} /></label><label>Last name<input value={form.last_name} onChange={e => setForm({ ...form, last_name: e.target.value })} /></label><label>Email address<input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} /></label><label>New password<input type="password" minLength="8" placeholder="Leave blank to keep current password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} /></label><div className="profile-readonly"><span>Role: {profile.role}</span><span>Credits: {profile.credits}</span><span>Total spent: {profile.total_credits_spent || '0.00'}</span></div><button disabled={busy} className="button button-dark">{busy ? 'Saving…' : 'Save changes'} <ArrowRight size={15} /></button></form>{message && <p className={message.includes('successfully') ? 'success-message' : 'form-error'}>{message}</p>}</section><section className="panel credit-history"><div className="panel-heading"><div><p className="eyebrow">Credit activity</p><h2>Spending history</h2></div><span className="user-credits">{profile.total_credits_spent || '0.00'} spent</span></div>{history.length ? <div className="credit-list">{history.map(item => <div className="credit-entry" key={item.id}><div><strong>{item.book_details?.title || 'Book'}</strong><span>Order #{item.id} · {item.borrowed_at ? new Date(item.borrowed_at).toLocaleDateString() : 'Date unavailable'}</span></div><strong>-{item.credits_spent} credits</strong></div>)}</div> : <p className="empty-state">No credit activity yet.</p>}</section></div></main>
 }
 
 function AuthPage({ mode, onLogin, onRegister }) {
@@ -119,7 +121,7 @@ function BorrowingRow({ item, onReturn }) {
   const statusText = returned
     ? `Returned ${item.returned_at ? new Date(item.returned_at).toLocaleDateString() : ''}`.trim()
     : `${overdue ? 'Overdue · ' : ''}Due ${new Date(item.due_date).toLocaleDateString()}`
-  return <div className="borrowing-row"><div className="mini-cover"><BookOpen size={19} /></div><div className="row-info"><strong>{item.book_details?.title || 'Book'}</strong><span>{item.book_details?.author || 'Unknown author'}</span></div><span className={`due-date ${returned ? 'returned' : overdue ? 'overdue' : ''}`}>{statusText}</span>{onReturn && <button className="button button-outline" onClick={() => onReturn(item.id)}>Return</button>}</div>
+  return <div className="borrowing-row"><div className="mini-cover"><BookOpen size={19} /></div><div className="row-info"><strong>{item.book_details?.title || 'Book'}</strong><span>{item.book_details?.author || 'Unknown author'}</span><small>Order #{item.id}</small></div><span className={`due-date ${returned ? 'returned' : overdue ? 'overdue' : ''}`}>{statusText}</span>{onReturn && <button className="button button-outline" onClick={() => onReturn(item.id)}>Return</button>}</div>
 }
 function EmptyState({ text, link, label }) { return <div className="empty-state"><p>{text}</p><Link className="text-link" to={link}>{label} <ArrowRight size={15} /></Link></div> }
 function AdminPanel({ initialUsers, initialBooks }) {
@@ -230,19 +232,21 @@ function Catalog({ user }) {
 function BookCard({ book, canBorrow }) {
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
+  const [showBorrowModal, setShowBorrowModal] = useState(false)
   const [borrowingPeriod, setBorrowingPeriod] = useState(book.borrowing_period || 7)
   async function borrow() {
     setBusy(true)
     try {
       await api.borrow(book.id, borrowingPeriod)
       setMessage('Borrowed!')
+      setShowBorrowModal(false)
     } catch (e) {
       setMessage(e.message)
     } finally {
       setBusy(false)
     }
   }
-  return <article className="book-tile"><div className={`cover cover-${book.id % 4}`}><span>{book.title}</span><small>{book.category}</small></div><div className="book-details"><div><span className="book-category">{book.category}</span><h3>{book.title}</h3><p>{book.author}</p>{book.shelf_location !== undefined && <span className="shelf-location">Shelf {book.shelf_location || 'not assigned'}</span>}</div><div className="book-meta"><span>{book.borrowing_period} days default</span><span>{book.borrowing_cost} credits</span></div>{canBorrow ? <><label>Borrow for (days)<input type="number" min="1" value={borrowingPeriod} onChange={e => setBorrowingPeriod(e.target.value)} /></label><button disabled={busy || book.availability !== 'AVAILABLE' || Boolean(message === 'Borrowed!')} className="button button-dark button-full" onClick={borrow}>{message || (book.availability === 'AVAILABLE' ? 'Borrow book' : 'Currently unavailable')}</button></> : <span className="book-note">Members can borrow this book</span>}{message && message !== 'Borrowed!' && <small className="inline-error">{message}</small>}</div></article>
+  return <><article className="book-tile"><div className={`cover cover-${book.id % 4}`}><span>{book.title}</span><small>{book.category}</small></div><div className="book-details"><div><span className="book-category">{book.category}</span><h3>{book.title}</h3><p>{book.author}</p>{book.shelf_location !== undefined && <span className="shelf-location">Shelf {book.shelf_location || 'not assigned'}</span>}</div><div className="book-meta"><span>{book.borrowing_period} days default</span><span>{book.borrowing_cost} credits</span></div>{canBorrow ? <button disabled={busy || book.availability !== 'AVAILABLE' || Boolean(message === 'Borrowed!')} className="button button-dark button-full" onClick={() => setShowBorrowModal(true)}>{message || (book.availability === 'AVAILABLE' ? 'Borrow book' : 'Currently unavailable')}</button> : <span className="book-note">Members can borrow this book</span>}{message && message !== 'Borrowed!' && <small className="inline-error">{message}</small>}</div></article>{showBorrowModal && <div className="modal-backdrop" onClick={() => setShowBorrowModal(false)}><div className="borrow-modal" onClick={event => event.stopPropagation()}><button className="modal-close" onClick={() => setShowBorrowModal(false)} aria-label="Close">×</button><p className="eyebrow">Borrow this book</p><h2>{book.title}</h2><p>Choose how many days you want to keep it.</p><label>Borrowing period (days)<input autoFocus type="number" min="1" value={borrowingPeriod} onChange={e => setBorrowingPeriod(e.target.value)} /></label><div className="modal-actions"><button className="button button-outline" onClick={() => setShowBorrowModal(false)}>Cancel</button><button className="button button-dark" disabled={busy} onClick={borrow}>{busy ? 'Borrowing…' : 'Confirm borrowing'}</button></div></div></div>}</>
 }
 
 function Borrowings({ user }) { const [items, setItems] = useState([]); const [error, setError] = useState(''); const isLibrarian = isLibraryStaff(user); useEffect(() => { api.borrowings().then(data => setItems(Array.isArray(data) ? data : data.results || [])).catch(e => setError(e.message)) }, []); async function returnBook(id) { try { await api.returnBook(id); setItems(items.map(item => item.id === id ? { ...item, status: 'RETURNED', returned_at: new Date().toISOString() } : item)) } catch (e) { setError(e.message) } } return <main className="page"><div className="page-intro"><div><p className="eyebrow">{isLibrarian ? 'Library desk' : 'Your history'}</p><h1>{isLibrarian ? <>All <em>borrowings.</em></> : <>Books you’ve<br /><em>taken with you.</em></>}</h1></div><p>{isLibrarian ? 'Review every member’s borrowing record and check books in when they are returned.' : 'A record of your current reads and everything you’ve returned to the shelves.'}</p></div>{error && <div className="form-error">{error}</div>}<section className="panel history-panel">{items.length ? items.map(item => <BorrowingRow item={item} onReturn={isLibrarian && item.status !== 'RETURNED' ? returnBook : null} key={item.id} />) : <EmptyState text="No borrowing records found." link="/catalog" label="Browse the collection" />}</section></main> }

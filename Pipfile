@@ -11,6 +11,7 @@ pytest = "*"
 baker = "*"
 model-bakery = "*"
 locust = "*"
+django-debug-toolbar = "*"
 
 [dev-packages]
 pytest-django = "*"
