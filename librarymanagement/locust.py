@@ -103,8 +103,9 @@ class LibraryUser(HttpUser):
 
         book_id = random.choice(self.book_ids)
         self.client.get(
-            f"/library/books/{book_id}/",
-            name="/library/books/[id]/",
+            "/library/books/",
+            params={"id": book_id},
+            name="/library/books/?id=",
         )
 
     @task(1)

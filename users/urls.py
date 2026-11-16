@@ -1,6 +1,12 @@
 from django.urls import path
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
-from .views import RegisterView,UserProfileView,AdminCreateLibrarianView,AdminUserListView,AdminUserDetailView,AdminUserBorrowingsView
+from .views import (
+    RegisterView,
+    UserProfileView,
+    LibrarianCreateView,
+    LibrarianUserListView,
+    LibrarianUserBorrowingsView,
+)
 
 
 urlpatterns = [
@@ -8,8 +14,7 @@ urlpatterns = [
     path('login/', TokenObtainPairView.as_view(), name='login'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token-refresh'),
     path('profile/', UserProfileView.as_view(), name='user-profile'),
-    path('create-admin/', AdminCreateLibrarianView.as_view(), name='create-admin'),
-    path('users-list/', AdminUserListView.as_view(), name='admin-user-list'),
-    path('users-list/<int:user_id>/borrowings/', AdminUserBorrowingsView.as_view(), name='admin-user-borrowings'),
-    path('users-list/<int:pk>/', AdminUserDetailView.as_view(), name='admin-user-detail'),
+    path('create-librarian/', LibrarianCreateView.as_view(), name='create-librarian'),
+    path('users-list/', LibrarianUserListView.as_view(), name='librarian-user-list'),
+    path('users-list/borrowings/', LibrarianUserBorrowingsView.as_view(), name='librarian-user-borrowings'),
 ]

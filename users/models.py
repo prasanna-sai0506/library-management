@@ -3,10 +3,10 @@ from django.db import models
 from decimal import Decimal
 
 class User(AbstractUser):
-    ADMIN = 'ADMIN'
+    LIBRARIAN = 'LIBRARIAN'
     MEMBER = 'MEMBER'
     ROLE_CHOICES = [
-        (ADMIN, 'Admin'),
+        (LIBRARIAN, 'Librarian'),
         (MEMBER, 'Member'),
     ]
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default=MEMBER)

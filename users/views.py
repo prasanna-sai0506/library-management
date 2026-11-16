@@ -1,44 +1,71 @@
-from rest_framework import generics, permissions
-from .models import User
-from .serializers import UserRegistrationSerializer, UserSerializer
-from .permissions import IsAdminOnly
+from rest_framework import permissions, status
+from rest_framework.response import Response
+from rest_framework.views import APIView
 from borrowings.models import Borrowing
 from borrowings.serializers import BorrowingSerializer
-class RegisterView(generics.CreateAPIView):
-    queryset = User.objects.all()
-    serializer_class = UserRegistrationSerializer
+from .models import User
+from .permissions import IsLibrarianOnly
+from .serializers import (
+    UserProfileSerializer,
+    UserRegistrationSerializer,
+    UserSerializer,
+)
+
+class RegisterView(APIView):
     permission_classes = [permissions.AllowAny]
 
-class UserProfileView(generics.RetrieveAPIView):
-    serializer_class = UserSerializer
+    def post(self, request):
+        serializer = UserRegistrationSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+class UserProfileView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
-    def get_object(self):
-        return self.request.user
+    def get(self, request):
+        return Response(UserProfileSerializer(request.user).data)
 
-class AdminCreateLibrarianView(generics.CreateAPIView):
-    queryset = User.objects.all()
-    serializer_class = UserRegistrationSerializer
-    permission_classes = [IsAdminOnly]
+    def put(self, request):
+        serializer = UserProfileSerializer(request.user, data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
 
-    def perform_create(self, serializer):
-        serializer.save(role=User.ADMIN)
+    def patch(self, request):
+        serializer = UserProfileSerializer(
+            request.user,
+            data=request.data,
+            partial=True,
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
 
-class AdminUserListView(generics.ListAPIView):
-    queryset = User.objects.all().order_by('username')
-    serializer_class = UserSerializer
-    permission_classes = [IsAdminOnly]
+class LibrarianCreateView(APIView):
+    permission_classes = [IsLibrarianOnly]
 
-class AdminUserDetailView(generics.RetrieveAPIView):
-    queryset = User.objects.all()
-    serializer_class = UserSerializer
-    permission_classes = [IsAdminOnly]
+    def post(self, request):
+        serializer = UserRegistrationSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save(role=User.LIBRARIAN)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
-class AdminUserBorrowingsView(generics.ListAPIView):
-    serializer_class = BorrowingSerializer
-    permission_classes = [IsAdminOnly]
+class LibrarianUserListView(APIView):
+    permission_classes = [IsLibrarianOnly]
 
-    def get_queryset(self):
-        return Borrowing.objects.filter(\
-            user_id=self.kwargs['user_id']\
-        ).select_related('user', 'book').order_by('-borrowed_at')
+    def get(self, request):
+        user_id = request.query_params.get('id')
+        users = User.objects.all().order_by('username')
+        if user_id:
+            users = users.filter(id=user_id)
+        return Response(UserSerializer(users, many=True).data)
+
+class LibrarianUserBorrowingsView(APIView):
+    permission_classes = [IsLibrarianOnly]
+
+    def get(self, request):
+        user_id = request.query_params.get('user_id')
+        if not user_id:
+            return Response({'error': 'The user_id query parameter is required.'},status=status.HTTP_400_BAD_REQUEST,)
+        borrowings = Borrowing.objects.filter(user_id=user_id).select_related('user', 'book').order_by('-borrowed_at')
+        return Response(BorrowingSerializer(borrowings, many=True, context={'request': request}).data)

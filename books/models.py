@@ -1,16 +1,23 @@
 from django.db import models
 from decimal import Decimal
-class Book(models.Model):
-    AVAILABLE = 'AVAILABLE'
-    UNAVAILABLE = 'UNAVAILABLE'
-    AVAILABILITY_CHOICES = [
-        (AVAILABLE, 'Available'),
-        (UNAVAILABLE, 'Unavailable'),
+
+AVAILABLE = 'AVAILABLE'
+UNAVAILABLE = 'UNAVAILABLE'
+AVAILABILITY_CHOICES = [
+    (AVAILABLE, 'Available'),
+    (UNAVAILABLE, 'Unavailable'),
     ]
+
+class Book(models.Model):
+    AVAILABLE = AVAILABLE
+    UNAVAILABLE = UNAVAILABLE
+    AVAILABILITY_CHOICES = AVAILABILITY_CHOICES
+
     title = models.CharField(max_length=255)
     author = models.CharField(max_length=255)
     isbn = models.CharField(max_length=13, unique=True)
     category = models.CharField(max_length=100)
+    shelf_location = models.CharField(max_length=100, blank=True, default='')
     total_copies = models.PositiveIntegerField(default=1)
     available_copies = models.PositiveIntegerField(default=1)
     availability = models.CharField(max_length=20, choices=AVAILABILITY_CHOICES, default=AVAILABLE)
