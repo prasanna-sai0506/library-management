@@ -31,17 +31,17 @@ async function request(path, options = {}) {
 }
 
 export const api = {
-  login: (credentials) => request('/auth/users/login/', { method: 'POST', body: JSON.stringify(credentials) }),
-  register: (data) => request('/auth/users/register/', { method: 'POST', body: JSON.stringify(data) }),
-  profile: () => request('/auth/users/profile/'),
-  updateProfile: (data) => request('/auth/users/profile/', { method: 'PATCH', body: JSON.stringify(data) }),
+  login: (credentials) => request('/auth/login/', { method: 'POST', body: JSON.stringify(credentials) }),
+  register: (data) => request('/users/register/', { method: 'POST', body: JSON.stringify(data) }),
+  profile: () => request('/users/profile/'),
+  updateProfile: (data) => request('/users/profile/', { method: 'PATCH', body: JSON.stringify(data) }),
   books: (query = '') => request(`/library/books/${query}`),
   createBook: (data) => request('/library/books/', { method: 'POST', body: JSON.stringify(data) }),
   updateBook: (id, data) => request(`/library/books/?id=${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
-  borrowings: (query = '') => request(`/api/borrowings/${query}`),
-  borrow: (book, borrowingPeriod) => request('/api/borrowings/', { method: 'POST', body: JSON.stringify({ book, borrowing_period: Number(borrowingPeriod) }) }),
-  returnBook: (id) => request(`/api/borrowings/return/?id=${id}`, { method: 'POST' }),
-  createLibrarian: (data) => request('/auth/users/create-librarian/', { method: 'POST', body: JSON.stringify(data) }),
-  users: () => request('/auth/users/users-list/'),
-  userBorrowings: (id) => request(`/api/borrowings/?user_id=${id}`),
+  borrowings: (query = '') => request(`/borrowings/${query}`),
+  borrow: (book, borrowingPeriod) => request('/borrowings/', { method: 'POST', body: JSON.stringify({ book, borrowing_period: Number(borrowingPeriod) }) }),
+  returnBook: (id) => request(`/borrowings/return/?id=${id}`, { method: 'POST' }),
+  createLibrarian: (data) => request('/users/create-librarian/', { method: 'POST', body: JSON.stringify(data) }),
+  users: () => request('/users/userslist/'),
+  userBorrowings: (id) => request(`/borrowings/?user_id=${id}`),
 }

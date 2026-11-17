@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from users.permissions import IsAdminOrReadOnly, is_library_staff
 from librarymanagement.pagination import DefaultPagination
-from .models import Book
+from .models import AVAILABLE, UNAVAILABLE, Book
 from .serializers import BookMemberSerializer, BookSerializer
 
 class BookAPIView(APIView):
@@ -58,7 +58,7 @@ class BookAPIView(APIView):
         serializer.save( 
             available_copies=total_copies, \
             availability=( \
-                Book.AVAILABLE if total_copies > 0 else Book.UNAVAILABLE \
+                AVAILABLE if total_copies > 0 else UNAVAILABLE \
             )
         )
         return Response(self.book_data(serializer.instance, request),status=status.HTTP_201_CREATED)

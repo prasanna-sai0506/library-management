@@ -4,15 +4,11 @@ from decimal import Decimal
 AVAILABLE = 'AVAILABLE'
 UNAVAILABLE = 'UNAVAILABLE'
 AVAILABILITY_CHOICES = [
-    (AVAILABLE, 'Available'),
-    (UNAVAILABLE, 'Unavailable'),
+        (AVAILABLE, 'Available'),
+        (UNAVAILABLE, 'Unavailable'),
     ]
-
 class Book(models.Model):
-    AVAILABLE = AVAILABLE
-    UNAVAILABLE = UNAVAILABLE
-    AVAILABILITY_CHOICES = AVAILABILITY_CHOICES
-
+    
     title = models.CharField(max_length=255)
     author = models.CharField(max_length=255)
     isbn = models.CharField(max_length=13, unique=True)

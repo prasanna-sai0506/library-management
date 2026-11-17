@@ -110,4 +110,4 @@ class LibraryUser(HttpUser):
 
     @task(1)
     def view_borrowing_history(self):
-        self.client.get("/api/borrowings/", name="/api/borrowings/")
+        self.client.get("/borrowings/", name="/borrowings/")

@@ -4,7 +4,7 @@ from django.utils import timezone
 from datetime import timedelta
 from decimal import Decimal
 from .models import Borrowing
-from books.models import Book
+from books.models import UNAVAILABLE, Book
 from books.serializers import BookMemberSerializer, BookSerializer
 from users.models import User
 from users.permissions import is_library_staff
@@ -23,7 +23,7 @@ class BorrowingCreateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 {'book': 'Only members can borrow books.'}
             )
-        if book.available_copies <= 0 or book.availability == Book.UNAVAILABLE:
+        if book.available_copies <= 0 or book.availability == UNAVAILABLE:
             raise serializers.ValidationError(
                 {'book': 'No copies available for this book.'}
             )
@@ -48,7 +48,7 @@ class BorrowingCreateSerializer(serializers.ModelSerializer):
             book.available_copies -= 1
             
             if book.available_copies == 0:
-                book.availability = Book.UNAVAILABLE
+                book.availability = UNAVAILABLE
                 
             book.save(update_fields=['available_copies', 'availability'])
             return Borrowing.objects.create(

@@ -9,7 +9,7 @@ from borrowings.models import Borrowing
 @pytest.fixture
 def create_borrowing(api_client):
     def do_create_borrowing(payload):
-        return api_client.post("/api/borrowings/", payload, format="json")
+        return api_client.post("/borrowings/", payload, format="json")
     return do_create_borrowing
 
 @pytest.mark.django_db

@@ -5,7 +5,7 @@ from django.utils import timezone
 from rest_framework import permissions, serializers, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from books.models import Book
+from books.models import AVAILABLE, Book
 from librarymanagement.pagination import DefaultPagination
 from users.permissions import IsLibrarianOnly, is_library_staff
 from .models import Borrowing
@@ -81,16 +81,16 @@ class BorrowingReturnAPIView(APIView):
             Book.objects.filter(pk=borrowing.book_id).update(
                 available_copies=F('available_copies') + 1 \
             )
-            Book.objects.filter(pk=borrowing.book_id, available_copies__gt=0).update(availability=Book.AVAILABLE)
+            Book.objects.filter(pk=borrowing.book_id, available_copies__gt=0).update(availability=AVAILABLE)
 
             if late_fee > 0:
                 borrowing.user.credits -= late_fee
                 borrowing.user.save()
 
             return Response({
-                'message': 'Book returned successfully.',
-                'late_fee_charged': str(late_fee),
-                'borrowing': borrowing_data(borrowing, request)
+                'message': 'Book returned successfully.',\
+                'late_fee_charged': str(late_fee),\
+                'borrowing': borrowing_data(borrowing, request)\
             })
 
 
