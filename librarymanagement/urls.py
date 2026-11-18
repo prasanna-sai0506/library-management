@@ -18,7 +18,6 @@ urlpatterns = [
     path('auth/token/refresh/', TokenRefreshView.as_view(), name='token-refresh'),
     path('users/', include('users.urls')),
     path('library/', include('books.urls')),
-    # Borrowing routes are intentionally registered here instead of under /api/.
     path('borrowings/', BorrowingListCreateAPIView.as_view(), name='borrowing-list-create'),
     path('borrowings/return/', BorrowingReturnAPIView.as_view(), name='borrowing-return'),
 ]

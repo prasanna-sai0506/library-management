@@ -229,7 +229,7 @@ function LibrarianUserBorrowings({ user }) {
 
 function Catalog({ user }) {
   const [books, setBooks] = useState([]); const [search, setSearch] = useState(''); const [error, setError] = useState('')
-  useEffect(() => { api.books().then(data => setBooks(Array.isArray(data) ? data : data.results || [])).catch(e => setError(e.message)) }, [])
+  useEffect(() => { api.books('?page_size=100').then(data => setBooks(Array.isArray(data) ? data : data.results || [])).catch(e => setError(e.message)) }, [])
   const filtered = useMemo(() => books.filter(book => `${book.title} ${book.author} ${book.category}`.toLowerCase().includes(search.toLowerCase())), [books, search])
   return <main className="page"><div className="page-intro catalog-intro"><div><p className="eyebrow">The collection</p><h1>Find something<br /><em>worth reading.</em></h1></div><p>Browse our shelves and discover your next favorite book. Search by title, author, or subject.</p></div><div className="search-bar"><Search size={19} /><input placeholder="Search the collection…" value={search} onChange={e => setSearch(e.target.value)} /></div>{error ? <div className="form-error">{error}</div> : <div className="book-grid">{filtered.map(book => <BookCard book={book} canBorrow={user.role === 'MEMBER' && !user.is_staff} key={book.id} />)}</div>}{!filtered.length && !error && <EmptyState text="No books match your search." link="/catalog" label="Clear search" />}</main>
 }
