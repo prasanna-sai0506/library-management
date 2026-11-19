@@ -125,7 +125,7 @@ function BorrowingRow({ item, onReturn }) {
   const statusText = returned
     ? `Returned ${item.returned_at ? new Date(item.returned_at).toLocaleDateString() : ''}`.trim()
     : `${overdue ? 'Overdue · ' : ''}Due ${new Date(item.due_date).toLocaleDateString()}`
-  return <div className="borrowing-row"><div className="mini-cover"><BookOpen size={19} /></div><div className="row-info"><strong>{item.book_details?.title || 'Book'}</strong><span>{item.book_details?.author || 'Unknown author'}</span><small>Order #{item.id}</small></div><span className={`due-date ${returned ? 'returned' : overdue ? 'overdue' : ''}`}>{statusText}</span>{onReturn && <button className="button button-outline" onClick={() => onReturn(item.id)}>Return</button>}</div>
+  return <div className="borrowing-row"><div className="mini-cover"><BookOpen size={19} /></div><div className="row-info"><strong>{item.book_details?.title || 'Book'}</strong><span>Book #{item.book_details?.id || item.book}</span><small>Order #{item.id}</small></div><span className={`due-date ${returned ? 'returned' : overdue ? 'overdue' : ''}`}>{statusText}</span>{onReturn && <button className="button button-outline" onClick={() => onReturn(item.id)}>Return</button>}</div>
 }
 function EmptyState({ text, link, label }) { return <div className="empty-state"><p>{text}</p><Link className="text-link" to={link}>{label} <ArrowRight size={15} /></Link></div> }
 function AdminPanel({ initialUsers, initialBooks }) {

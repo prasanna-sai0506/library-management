@@ -5,9 +5,7 @@ from datetime import timedelta
 from decimal import Decimal
 from .models import Borrowing
 from books.models import UNAVAILABLE, Book
-from books.serializers import BookMemberSerializer, BookSerializer
 from users.models import User
-from users.permissions import is_library_staff
 
 class BorrowingCreateSerializer(serializers.ModelSerializer):
     book = serializers.PrimaryKeyRelatedField(queryset=Book.objects.all())
@@ -70,10 +68,7 @@ class BorrowingSerializer(serializers.ModelSerializer):
             'credits_spent','borrowing_period','late_fee','status']
 
     def get_book_details(self, borrowing):
-        request = self.context.get('request')
-        if request and is_library_staff(request.user):
-            serializer_class = (BookSerializer)
-        else:
-            serializer_class = (BookMemberSerializer)
-        
-        return serializer_class(borrowing.book).data
+        return {
+            'id': borrowing.book_id,
+            'title': borrowing.book.title,
+        }

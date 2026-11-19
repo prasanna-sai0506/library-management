@@ -102,9 +102,4 @@ def get_borrowing_from_query(request):
 
 
 def borrowing_data(borrowings, request, many=False):
-    data = BorrowingSerializer(borrowings, many=many, context={'request': request}).data
-    if not is_library_staff(request.user):
-        records = data if many else [data]
-        for record in records:
-            record.get('book_details', {}).pop('shelf_location', None)
-    return data
+    return BorrowingSerializer(borrowings, many=many, context={'request': request}).data
