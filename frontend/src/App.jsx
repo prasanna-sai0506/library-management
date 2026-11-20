@@ -254,8 +254,14 @@ function UnderDeskDesk() {
 
 function AdminBooks({ initialBooks }) {
   const emptyForm = { title: '', author: '', isbn: '', category: '', shelf_location: '', total_copies: 1, borrowing_cost: '5.00', borrowing_period: 7 }
+  const emptyShelfForm = { name: '', capacity: 1 }
+  const [shelfSearch, setShelfSearch] = useState('')
+  const emptyAssignmentForm = { shelf: '', book: '', copies: 1 }
   const [form, setForm] = useState(emptyForm)
+  const [shelfForm, setShelfForm] = useState(emptyShelfForm)
+  const [assignmentForm, setAssignmentForm] = useState(emptyAssignmentForm)
   const [books, setBooks] = useState(initialBooks)
+  const [shelves, setShelves] = useState([])
   const [message, setMessage] = useState('')
   const [busy, setBusy] = useState(false)
 
@@ -264,7 +270,15 @@ function AdminBooks({ initialBooks }) {
     setBooks(Array.isArray(data) ? data : data.results || [])
   }
 
-  useEffect(() => { setBooks(initialBooks) }, [initialBooks])
+  async function loadShelves() {
+    const data = await api.shelves()
+    setShelves(Array.isArray(data) ? data : [])
+  }
+
+  useEffect(() => {
+    setBooks(initialBooks)
+    loadShelves().catch(e => setMessage(e.message))
+  }, [initialBooks])
 
   async function submit(event) {
     event.preventDefault()
@@ -280,6 +294,47 @@ function AdminBooks({ initialBooks }) {
       }
       setForm(emptyForm)
       await loadBooks()
+      await loadShelves()
+    } catch (e) {
+      setMessage(e.message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function createShelf(event) {
+    event.preventDefault()
+    setBusy(true)
+    setMessage('')
+    try {
+      await api.createShelf({
+        name: shelfForm.name,
+        capacity: Number(shelfForm.capacity),
+      })
+      setShelfForm(emptyShelfForm)
+      await loadShelves()
+      setMessage('Shelf created.')
+    } catch (e) {
+      setMessage(e.message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function assignCopies(event) {
+    event.preventDefault()
+    setBusy(true)
+    setMessage('')
+    try {
+      await api.createShelfAssignment({
+        shelf: Number(assignmentForm.shelf),
+        book: Number(assignmentForm.book),
+        copies: books.find(book => book.id === Number(assignmentForm.book))?.total_copies,
+      })
+      setAssignmentForm(emptyAssignmentForm)
+      await loadShelves()
+      await loadBooks()
+      setMessage('Copies assigned to shelf.')
     } catch (e) {
       setMessage(e.message)
     } finally {
@@ -289,14 +344,46 @@ function AdminBooks({ initialBooks }) {
 
   return <section className="panel admin-panel">
     <div className="panel-heading"><div><p className="eyebrow">Collection desk</p><h2>Book locations</h2></div><BookOpen size={20} color="#bc7651" /></div>
-    <div className="staff-book-list">{books.map(book => <div className="staff-book-row" key={book.id}><div className="row-info"><strong>{book.title}</strong><span>{book.author}</span></div><span className="shelf-label">{book.shelf_location || 'No shelf assigned'}</span><button className="button button-outline" onClick={() => setForm({ ...book })}>Edit shelf</button></div>)}</div>
+    <div className="staff-book-list">{books.map(book => <div className="staff-book-row" key={book.id}><div className="row-info"><strong>{book.title}</strong><span>{book.author}</span></div><span className="shelf-label">{book.shelf_location || "Unassigned"} / {book.total_copies} copies</span><button type="button" onClick={() => setForm({ ...book })}>Edit shelf</button></div>)}</div>
     <p className="eyebrow add-user-label">{form.id ? `Update shelf for ${form.title}` : 'Add a book'}</p>
     <form className="admin-form" onSubmit={submit}>
+      <input placeholder="Shelf name or ID" value={form.shelf_location} onChange={e => setForm({ ...form, shelf_location: e.target.value })} />
       {!form.id && <><input required placeholder="Title" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} /><input required placeholder="Author" value={form.author} onChange={e => setForm({ ...form, author: e.target.value })} /><input required placeholder="ISBN" value={form.isbn} onChange={e => setForm({ ...form, isbn: e.target.value })} /><input required placeholder="Category" value={form.category} onChange={e => setForm({ ...form, category: e.target.value })} /></>}
-      <input required placeholder="Shelf location (e.g. A-12)" value={form.shelf_location} onChange={e => setForm({ ...form, shelf_location: e.target.value })} />
       {!form.id && <><input required min="1" type="number" placeholder="Copies" value={form.total_copies} onChange={e => setForm({ ...form, total_copies: e.target.value })} /><input required min="0" step="0.01" type="number" placeholder="Cost" value={form.borrowing_cost} onChange={e => setForm({ ...form, borrowing_cost: e.target.value })} /><input required min="1" type="number" placeholder="Borrowing days" value={form.borrowing_period} onChange={e => setForm({ ...form, borrowing_period: e.target.value })} /></>}
       <button disabled={busy} className="button button-dark">{busy ? 'Saving…' : form.id ? 'Save shelf' : 'Add book'} <ArrowRight size={15} /></button>
     </form>
+
+    <div className="shelf-management">
+      <div className="panel-heading shelf-heading"><div><p className="eyebrow">Physical shelves</p><h2>Create shelf</h2></div></div>
+      <form className="admin-form shelf-form" onSubmit={createShelf}>
+        <input required placeholder="Shelf name or location (e.g. A-12)" value={shelfForm.name} onChange={e => setShelfForm({ ...shelfForm, name: e.target.value })} />
+        <input required min="1" type="number" placeholder="Capacity" value={shelfForm.capacity} onChange={e => setShelfForm({ ...shelfForm, capacity: e.target.value })} />
+        <button disabled={busy} className="button button-dark">Create shelf <ArrowRight size={15} /></button>
+      </form>
+
+      <input aria-label="Search shelves" placeholder="Search shelf name or ID" value={shelfSearch} onChange={e => setShelfSearch(e.target.value)} />
+      <p>{shelves.length} shelves. Showing up to 50 matching shelves.</p>
+      <div className="shelf-list">
+        {shelves.filter(shelf => shelf.name.toLowerCase().includes(shelfSearch.toLowerCase()) || String(shelf.id) === shelfSearch).slice(0, 50).map(shelf => <div className="shelf-row" key={shelf.id}>
+          <div className="row-info"><strong>{shelf.name}</strong><span>{shelf.assigned_copies} / {shelf.capacity} copies assigned</span></div>
+          <span className="role-badge">{shelf.remaining_capacity} remaining</span>
+        </div>)}
+      </div>
+
+      <div className="panel-heading shelf-heading"><div><p className="eyebrow">Copy placement</p><h2>Assign books to shelves</h2></div></div>
+      <form className="admin-form shelf-form" onSubmit={assignCopies}>
+        <select required value={assignmentForm.shelf} onChange={e => setAssignmentForm({ ...assignmentForm, shelf: e.target.value })}>
+          <option value="">Choose shelf</option>
+          {shelves.filter(shelf => shelf.remaining_capacity > 0).map(shelf => <option value={shelf.id} key={shelf.id}>{shelf.name} ({shelf.remaining_capacity} remaining)</option>)}
+        </select>
+        <select required value={assignmentForm.book} onChange={e => setAssignmentForm({ ...assignmentForm, book: e.target.value })}>
+          <option value="">Choose book</option>
+          {books.map(book => <option value={book.id} key={book.id}>{book.title} ({book.total_copies} copies)</option>)}
+        </select>
+        <p>All copies of the selected book move together.</p>
+        <button disabled={busy} className="button button-dark">Assign copies <ArrowRight size={15} /></button>
+      </form>
+    </div>
     {message && <p className={message.includes('updated') || message.includes('added') ? 'success-message' : 'form-error'}>{message}</p>}
   </section>
 }
@@ -319,22 +406,41 @@ function LibrarianUserBorrowings({ user }) {
 function Catalog({ user }) {
   const [books, setBooks] = useState([])
   const [search, setSearch] = useState('')
+  const [submittedSearch, setSubmittedSearch] = useState('')
   const [page, setPage] = useState(1)
   const [pages, setPages] = useState(1)
   const [count, setCount] = useState(0)
   const [error, setError] = useState('')
 
   useEffect(() => {
-    api.books(`?page=${page}&page_size=9&search=${encodeURIComponent(search)}`)
+    const params = new URLSearchParams({
+      page: String(page),
+      page_size: '9',
+    })
+    if (submittedSearch) params.set('title', submittedSearch)
+
+    api.books(`?${params.toString()}`)
       .then(data => {
         setBooks(Array.isArray(data) ? data : data.results || [])
         setCount(data.count || (Array.isArray(data) ? data.length : 0))
         setPages(data.count ? Math.max(1, Math.ceil(data.count / 9)) : 1)
       })
       .catch(e => setError(e.message))
-  }, [page, search])
+  }, [page, submittedSearch])
 
-  return <main className="page"><div className="page-intro catalog-intro"><div><p className="eyebrow">The collection</p><h1>Find something<br /><em>worth reading.</em></h1></div><p>Browse our shelves and discover your next favorite book. Search by title, author, or subject.</p></div><div className="search-bar"><Search size={19} /><input placeholder="Search the collection…" value={search} onChange={e => { setSearch(e.target.value); setPage(1) }} /></div>{error ? <div className="form-error">{error}</div> : <div className="book-grid">{books.map(book => <BookCard book={book} canBorrow={user.role === 'MEMBER' && !user.is_staff} key={book.id} />)}</div>}{!count && !error && <EmptyState text="No books match your search." link="/catalog" label="Clear search" />}<Pagination page={page} pages={pages} onPage={setPage} /></main>
+  function submitSearch(event) {
+    event.preventDefault()
+    setPage(1)
+    setSubmittedSearch(search.trim())
+  }
+
+  function clearSearch() {
+    setSearch('')
+    setSubmittedSearch('')
+    setPage(1)
+  }
+
+  return <main className="page"><div className="page-intro catalog-intro"><div><p className="eyebrow">The collection</p><h1>Find something<br /><em>worth reading.</em></h1></div><p>Browse our shelves and discover your next favorite book. Search by title, author, or subject.</p></div><form className="search-bar" onSubmit={submitSearch}><Search size={19} /><input placeholder="Search by title…" value={search} onChange={e => setSearch(e.target.value)} />{search && <button className="search-clear" type="button" aria-label="Clear search" onClick={clearSearch}><X size={16} /></button>}<button className="search-submit" type="submit">Search</button></form>{error ? <div className="form-error">{error}</div> : <div className="book-grid">{books.map(book => <BookCard book={book} canBorrow={user.role === 'MEMBER' && !user.is_staff} key={book.id} />)}</div>}{!count && !error && <div className="empty-state"><p>No books match your search.</p>{submittedSearch && <button className="button button-outline" type="button" onClick={clearSearch}>Clear search</button>}</div>}<Pagination page={page} pages={pages} onPage={setPage} /></main>
 }
 function BookCard({ book, canBorrow }) {
   const [busy, setBusy] = useState(false)
