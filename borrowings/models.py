@@ -43,3 +43,23 @@ class Borrowing(models.Model):
             discounted_charge = (daily_charge * Decimal("0.50") * extra_days)
             late_fee = first_seven_days + discounted_charge
         return late_fee.quantize(Decimal("0.01"))
+
+
+class UnderDeskBook(models.Model):
+    borrowing = models.OneToOneField(
+        Borrowing,
+        on_delete=models.CASCADE,
+        related_name='under_desk_copy',
+    )
+    book = models.ForeignKey(
+        Book,
+        on_delete=models.CASCADE,
+        related_name='under_desk_copies',
+    )
+    placed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['placed_at']
+
+    def __str__(self):
+        return f"{self.book.title} under desk (borrowed by {self.borrowing.user.username})"

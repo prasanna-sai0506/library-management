@@ -3,7 +3,7 @@ from django.db import transaction
 from django.utils import timezone
 from datetime import timedelta
 from decimal import Decimal
-from .models import Borrowing
+from .models import Borrowing, UnderDeskBook
 from books.models import UNAVAILABLE, Book
 from users.models import User
 
@@ -44,6 +44,10 @@ class BorrowingCreateSerializer(serializers.ModelSerializer):
             user.credits -= borrowing_cost
             user.save(update_fields=['credits'])
             book.available_copies -= 1
+
+            under_desk_copy = UnderDeskBook.objects.select_for_update().filter(book=book).first()
+            if under_desk_copy:
+                under_desk_copy.delete()
             
             if book.available_copies == 0:
                 book.availability = UNAVAILABLE

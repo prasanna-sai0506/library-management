@@ -8,7 +8,7 @@ from rest_framework.views import APIView
 from books.models import AVAILABLE, Book
 from librarymanagement.pagination import DefaultPagination
 from users.permissions import IsLibrarianOnly, is_library_staff
-from .models import Borrowing
+from .models import Borrowing, UnderDeskBook
 from .serializers import BorrowingCreateSerializer, BorrowingSerializer
 
 class BorrowingListCreateAPIView(APIView):
@@ -82,6 +82,10 @@ class BorrowingReturnAPIView(APIView):
                 available_copies=F('available_copies') + 1 \
             )
             Book.objects.filter(pk=borrowing.book_id, available_copies__gt=0).update(availability=AVAILABLE)
+            UnderDeskBook.objects.get_or_create(
+                borrowing=borrowing,
+                defaults={'book': borrowing.book},
+            )
 
             if late_fee > 0:
                 borrowing.user.credits -= late_fee
@@ -92,6 +96,47 @@ class BorrowingReturnAPIView(APIView):
                 'late_fee_charged': str(late_fee),\
                 'borrowing': borrowing_data(borrowing, request)\
             })
+
+
+class UnderDeskCloseAPIView(APIView):
+    permission_classes = [permissions.IsAuthenticated, IsLibrarianOnly]
+
+    def post(self, request):
+        with transaction.atomic():
+            under_desk_count = UnderDeskBook.objects.select_for_update().count()
+            UnderDeskBook.objects.all().delete()
+
+        return Response({
+            'message': f'{under_desk_count} under-desk book(s) moved to the shelf.',
+            'moved_count': under_desk_count,
+        })
+
+
+class UnderDeskListAPIView(APIView):
+    permission_classes = [permissions.IsAuthenticated, IsLibrarianOnly]
+
+    def get(self, request):
+        copies = UnderDeskBook.objects.select_related(
+            'book',
+            'borrowing',
+            'borrowing__user',
+        ).order_by('placed_at')
+
+        paginator = DefaultPagination()
+        page = paginator.paginate_queryset(copies, request, view=self)
+        data = [
+            {
+                'id': copy.id,
+                'book': copy.book_id,
+                'title': copy.book.title,
+                'isbn': copy.book.isbn,
+                'borrower': copy.borrowing.user.username,
+                'borrowing': copy.borrowing_id,
+                'placed_at': copy.placed_at,
+            }
+            for copy in page
+        ]
+        return paginator.get_paginated_response(data)
 
 
 def get_borrowing_from_query(request):

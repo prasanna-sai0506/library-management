@@ -41,6 +41,8 @@ export const api = {
   borrowings: (query = '') => request(`/borrowings/${query}`),
   borrow: (book, borrowingPeriod) => request('/borrowings/', { method: 'POST', body: JSON.stringify({ book, borrowing_period: Number(borrowingPeriod) }) }),
   returnBook: (id) => request(`/borrowings/return/?id=${id}`, { method: 'POST' }),
+  closeUnderDesk: () => request('/borrowings/under-desk/close/', { method: 'POST' }),
+  underDesk: (query = '') => request(`/borrowings/under-desk/${query}`),
   createLibrarian: (data) => request('/users/create-librarian/', { method: 'POST', body: JSON.stringify(data) }),
   users: () => request('/users/userslist/'),
   userBorrowings: (id) => request(`/borrowings/?user_id=${id}`),

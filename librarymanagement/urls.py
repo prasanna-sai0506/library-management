@@ -10,7 +10,12 @@ from django.urls import include, path
 from django.conf import settings
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
-from borrowings.views import BorrowingListCreateAPIView, BorrowingReturnAPIView
+from borrowings.views import (
+    BorrowingListCreateAPIView,
+    BorrowingReturnAPIView,
+    UnderDeskCloseAPIView,
+    UnderDeskListAPIView,
+)
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -20,6 +25,8 @@ urlpatterns = [
     path('library/', include('books.urls')),
     path('borrowings/', BorrowingListCreateAPIView.as_view(), name='borrowing-list-create'),
     path('borrowings/return/', BorrowingReturnAPIView.as_view(), name='borrowing-return'),
+    path('borrowings/under-desk/close/', UnderDeskCloseAPIView.as_view(), name='under-desk-close'),
+    path('borrowings/under-desk/', UnderDeskListAPIView.as_view(), name='under-desk-list'),
 ]
 
 if settings.DEBUG:

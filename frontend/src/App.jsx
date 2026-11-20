@@ -67,17 +67,29 @@ function ProfilePage({ user, onUpdated }) {
   const [profile, setProfile] = useState(user)
   const [form, setForm] = useState({ username: user.username, first_name: user.first_name || '', last_name: user.last_name || '', email: user.email || '', password: '' })
   const [history, setHistory] = useState([])
+  const [historyPage, setHistoryPage] = useState(1)
+  const [historyPages, setHistoryPages] = useState(1)
+  const [historyCount, setHistoryCount] = useState(0)
   const [message, setMessage] = useState('')
   const [busy, setBusy] = useState(false)
 
   useEffect(() => {
-    Promise.all([api.profile(), api.borrowings()]).then(([updated, borrowings]) => {
+    api.profile().then(updated => {
       setProfile(updated)
       setForm({ username: updated.username, first_name: updated.first_name || '', last_name: updated.last_name || '', email: updated.email || '', password: '' })
-      setHistory(Array.isArray(borrowings) ? borrowings : borrowings.results || [])
       onUpdated(updated)
     }).catch(e => setMessage(e.message))
   }, [])
+
+  useEffect(() => {
+    api.borrowings(`?page=${historyPage}&page_size=8`)
+      .then(data => {
+        setHistory(Array.isArray(data) ? data : data.results || [])
+        setHistoryCount(data.count || (Array.isArray(data) ? data.length : 0))
+        setHistoryPages(data.count ? Math.max(1, Math.ceil(data.count / 8)) : 1)
+      })
+      .catch(e => setMessage(e.message))
+  }, [historyPage])
 
   async function submit(event) {
     event.preventDefault()
@@ -98,7 +110,7 @@ function ProfilePage({ user, onUpdated }) {
     }
   }
 
-  return <main className="page"><div className="page-intro"><div><p className="eyebrow">Your account</p><h1>Personal <em>details.</em></h1><p>Update your account information without signing in again.</p></div></div><div className="profile-grid"><section className="panel profile-panel"><div className="panel-heading"><div><p className="eyebrow">Profile</p><h2>{profile.username}</h2></div><span className="role-badge">{isLibraryStaff(profile) ? 'Librarian' : 'Member'}</span></div><form className="profile-form" onSubmit={submit}><label>Username<input required value={form.username} onChange={e => setForm({ ...form, username: e.target.value })} /></label><label>First name<input value={form.first_name} onChange={e => setForm({ ...form, first_name: e.target.value })} /></label><label>Last name<input value={form.last_name} onChange={e => setForm({ ...form, last_name: e.target.value })} /></label><label>Email address<input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} /></label><label>New password<input type="password" minLength="8" placeholder="Leave blank to keep current password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} /></label><div className="profile-readonly"><span>Role: {profile.role}</span><span>Credits: {profile.credits}</span><span>Total spent: {profile.total_credits_spent || '0.00'}</span></div><button disabled={busy} className="button button-dark">{busy ? 'Saving…' : 'Save changes'} <ArrowRight size={15} /></button></form>{message && <p className={message.includes('successfully') ? 'success-message' : 'form-error'}>{message}</p>}</section><section className="panel credit-history"><div className="panel-heading"><div><p className="eyebrow">Credit activity</p><h2>Spending history</h2></div><span className="user-credits">{profile.total_credits_spent || '0.00'} spent</span></div>{history.length ? <div className="credit-list">{history.map(item => <div className="credit-entry" key={item.id}><div><strong>{item.book_details?.title || 'Book'}</strong><span>Order #{item.id} · {item.borrowed_at ? new Date(item.borrowed_at).toLocaleDateString() : 'Date unavailable'}</span></div><strong>-{item.credits_spent} credits</strong></div>)}</div> : <p className="empty-state">No credit activity yet.</p>}</section></div></main>
+  return <main className="page"><div className="page-intro"><div><p className="eyebrow">Your account</p><h1>Personal <em>details.</em></h1><p>Update your account information without signing in again.</p></div></div><div className="profile-grid"><section className="panel profile-panel"><div className="panel-heading"><div><p className="eyebrow">Profile</p><h2>{profile.username}</h2></div><span className="role-badge">{isLibraryStaff(profile) ? 'Librarian' : 'Member'}</span></div><form className="profile-form" onSubmit={submit}><label>Username<input required value={form.username} onChange={e => setForm({ ...form, username: e.target.value })} /></label><label>First name<input value={form.first_name} onChange={e => setForm({ ...form, first_name: e.target.value })} /></label><label>Last name<input value={form.last_name} onChange={e => setForm({ ...form, last_name: e.target.value })} /></label><label>Email address<input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} /></label><label>New password<input type="password" minLength="8" placeholder="Leave blank to keep current password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} /></label><div className="profile-readonly"><span>Role: {profile.role}</span><span>Credits: {profile.credits}</span><span>Total spent: {profile.total_credits_spent || '0.00'}</span></div><button disabled={busy} className="button button-dark">{busy ? 'Saving…' : 'Save changes'} <ArrowRight size={15} /></button></form>{message && <p className={message.includes('successfully') ? 'success-message' : 'form-error'}>{message}</p>}</section><section className="panel credit-history"><div className="panel-heading"><div><p className="eyebrow">Credit activity</p><h2>Spending history</h2></div><span className="user-credits">{profile.total_credits_spent || '0.00'} spent</span></div>{history.length ? <div className="credit-list">{history.map(item => <div className="credit-entry" key={item.id}><div><strong>{item.book_details?.title || 'Book'}</strong><span>Order #{item.id} · {item.borrowed_at ? new Date(item.borrowed_at).toLocaleDateString() : 'Date unavailable'}</span></div><strong>-{item.credits_spent} credits</strong></div>)}</div> : <p className="empty-state">No credit activity yet.</p>}<Pagination page={historyPage} pages={historyPages} onPage={setHistoryPage} /></section></div></main>
 }
 
 function AuthPage({ mode, onLogin, onRegister }) {
@@ -128,6 +140,14 @@ function BorrowingRow({ item, onReturn }) {
   return <div className="borrowing-row"><div className="mini-cover"><BookOpen size={19} /></div><div className="row-info"><strong>{item.book_details?.title || 'Book'}</strong><span>Book #{item.book_details?.id || item.book}</span><small>Order #{item.id}</small></div><span className={`due-date ${returned ? 'returned' : overdue ? 'overdue' : ''}`}>{statusText}</span>{onReturn && <button className="button button-outline" onClick={() => onReturn(item.id)}>Return</button>}</div>
 }
 function EmptyState({ text, link, label }) { return <div className="empty-state"><p>{text}</p><Link className="text-link" to={link}>{label} <ArrowRight size={15} /></Link></div> }
+function Pagination({ page, pages, onPage }) {
+  if (pages <= 1) return null
+  return <nav className="pagination" aria-label="Pagination">
+    <button type="button" className="button button-outline" disabled={page <= 1} onClick={() => onPage(page - 1)}>Previous</button>
+    <span>Page {page} of {pages}</span>
+    <button type="button" className="button button-outline" disabled={page >= pages} onClick={() => onPage(page + 1)}>Next</button>
+  </nav>
+}
 function AdminPanel({ initialUsers, initialBooks }) {
   const [form, setForm] = useState({ username: '', email: '', password: '' })
   const [users, setUsers] = useState(initialUsers)
@@ -160,7 +180,76 @@ function AdminPanel({ initialUsers, initialBooks }) {
     <p className="eyebrow add-user-label">Add a librarian</p>
     <form className="admin-form" onSubmit={submit}><input required placeholder="Username" value={form.username} onChange={e => setForm({ ...form, username: e.target.value })} /><input required type="email" placeholder="Email address" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} /><input required minLength="8" type="password" placeholder="Temporary password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} /><button disabled={busy} className="button button-dark">{busy ? 'Creating…' : 'Create account'} <ArrowRight size={15} /></button></form>
     {message && <p className={message.includes('created') ? 'success-message' : 'form-error'}>{message}</p>}
-  </section><AdminBooks initialBooks={initialBooks} /></>
+  </section><UnderDeskDesk /><AdminBooks initialBooks={initialBooks} /></>
+}
+
+function UnderDeskDesk() {
+  const [copies, setCopies] = useState([])
+  const [page, setPage] = useState(1)
+  const [pages, setPages] = useState(1)
+  const [count, setCount] = useState(0)
+  const [busy, setBusy] = useState(false)
+  const [message, setMessage] = useState('')
+  const [error, setError] = useState('')
+
+  async function loadCopies(nextPage = page) {
+    try {
+      const data = await api.underDesk(`?page=${nextPage}&page_size=10`)
+      setCopies(Array.isArray(data) ? data : data.results || [])
+      setCount(data.count || (Array.isArray(data) ? data.length : 0))
+      setPages(data.count ? Math.max(1, Math.ceil(data.count / 10)) : 1)
+      setError('')
+    } catch (e) {
+      setError(e.message)
+    }
+  }
+
+  useEffect(() => { loadCopies(page) }, [page])
+
+  async function closeUnderDesk() {
+    setBusy(true)
+    setMessage('')
+    setError('')
+    try {
+      const result = await api.closeUnderDesk()
+      setMessage(result.message)
+      setPage(1)
+      await loadCopies(1)
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return <section className="panel admin-panel under-desk-panel">
+    <div className="panel-heading">
+      <div>
+        <p className="eyebrow">Library desk</p>
+        <h2>Under-desk books</h2>
+      </div>
+      <span className="under-desk-count">{count} waiting</span>
+    </div>
+    <div className="under-desk-actions">
+      <span>Returned copies are kept here until end of day.</span>
+      <button className="button button-dark" disabled={busy || count === 0} onClick={closeUnderDesk}>
+        {busy ? 'Moving...' : 'Move all to shelf'}
+      </button>
+    </div>
+    {error && <p className="form-error">{error}</p>}
+    {message && <p className="success-message">{message}</p>}
+    {copies.length ? <div className="under-desk-list">
+      {copies.map(copy => <div className="under-desk-row" key={copy.id}>
+        <div className="row-info">
+          <strong>{copy.title}</strong>
+          <span>ISBN {copy.isbn}</span>
+        </div>
+        <span className="under-desk-borrower">Returned by borrowing #{copy.borrowing}</span>
+        <span className="under-desk-time">{new Date(copy.placed_at).toLocaleString()}</span>
+      </div>)}
+    </div> : !error && <p className="empty-state">No books are currently under the desk.</p>}
+    <Pagination page={page} pages={pages} onPage={setPage} />
+  </section>
 }
 
 function AdminBooks({ initialBooks }) {
@@ -228,10 +317,24 @@ function LibrarianUserBorrowings({ user }) {
 }
 
 function Catalog({ user }) {
-  const [books, setBooks] = useState([]); const [search, setSearch] = useState(''); const [error, setError] = useState('')
-  useEffect(() => { api.books('?page_size=100').then(data => setBooks(Array.isArray(data) ? data : data.results || [])).catch(e => setError(e.message)) }, [])
-  const filtered = useMemo(() => books.filter(book => `${book.title} ${book.author} ${book.category}`.toLowerCase().includes(search.toLowerCase())), [books, search])
-  return <main className="page"><div className="page-intro catalog-intro"><div><p className="eyebrow">The collection</p><h1>Find something<br /><em>worth reading.</em></h1></div><p>Browse our shelves and discover your next favorite book. Search by title, author, or subject.</p></div><div className="search-bar"><Search size={19} /><input placeholder="Search the collection…" value={search} onChange={e => setSearch(e.target.value)} /></div>{error ? <div className="form-error">{error}</div> : <div className="book-grid">{filtered.map(book => <BookCard book={book} canBorrow={user.role === 'MEMBER' && !user.is_staff} key={book.id} />)}</div>}{!filtered.length && !error && <EmptyState text="No books match your search." link="/catalog" label="Clear search" />}</main>
+  const [books, setBooks] = useState([])
+  const [search, setSearch] = useState('')
+  const [page, setPage] = useState(1)
+  const [pages, setPages] = useState(1)
+  const [count, setCount] = useState(0)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    api.books(`?page=${page}&page_size=9&search=${encodeURIComponent(search)}`)
+      .then(data => {
+        setBooks(Array.isArray(data) ? data : data.results || [])
+        setCount(data.count || (Array.isArray(data) ? data.length : 0))
+        setPages(data.count ? Math.max(1, Math.ceil(data.count / 9)) : 1)
+      })
+      .catch(e => setError(e.message))
+  }, [page, search])
+
+  return <main className="page"><div className="page-intro catalog-intro"><div><p className="eyebrow">The collection</p><h1>Find something<br /><em>worth reading.</em></h1></div><p>Browse our shelves and discover your next favorite book. Search by title, author, or subject.</p></div><div className="search-bar"><Search size={19} /><input placeholder="Search the collection…" value={search} onChange={e => { setSearch(e.target.value); setPage(1) }} /></div>{error ? <div className="form-error">{error}</div> : <div className="book-grid">{books.map(book => <BookCard book={book} canBorrow={user.role === 'MEMBER' && !user.is_staff} key={book.id} />)}</div>}{!count && !error && <EmptyState text="No books match your search." link="/catalog" label="Clear search" />}<Pagination page={page} pages={pages} onPage={setPage} /></main>
 }
 function BookCard({ book, canBorrow }) {
   const [busy, setBusy] = useState(false)
