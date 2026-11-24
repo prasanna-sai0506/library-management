@@ -37,6 +37,7 @@ class BookAdmin(admin.ModelAdmin):
 
 @admin.register(Shelf)
 class ShelfAdmin(admin.ModelAdmin):
-    list_display = ['name', 'capacity', 'created_at']
+    list_display = ['name', 'column_name', 'shelf_number', 'capacity', 'created_at']
     search_fields = ['name']
-    readonly_fields = ['created_at', 'placements']
+    readonly_fields = ['name', 'created_at', 'placements']
+    fields = ['name', 'column_name', 'shelf_number', 'capacity', 'placements', 'created_at']

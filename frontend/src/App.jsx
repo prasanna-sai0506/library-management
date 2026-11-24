@@ -254,7 +254,7 @@ function UnderDeskDesk() {
 
 function AdminBooks({ initialBooks }) {
   const emptyForm = { title: '', author: '', isbn: '', category: '', shelf_location: '', total_copies: 1, borrowing_cost: '5.00', borrowing_period: 7 }
-  const emptyShelfForm = { name: '', capacity: 1 }
+  const emptyShelfForm = { column_name: 'A', capacity: 1 }
   const [shelfSearch, setShelfSearch] = useState('')
   const emptyAssignmentForm = { shelf: '', book: '', copies: 1 }
   const [form, setForm] = useState(emptyForm)
@@ -308,7 +308,7 @@ function AdminBooks({ initialBooks }) {
     setMessage('')
     try {
       await api.createShelf({
-        name: shelfForm.name,
+        column_name: shelfForm.column_name,
         capacity: Number(shelfForm.capacity),
       })
       setShelfForm(emptyShelfForm)
@@ -342,9 +342,28 @@ function AdminBooks({ initialBooks }) {
     }
   }
 
+  async function packShelves() {
+    setBusy(true)
+    setMessage('')
+    try {
+      await api.packShelves()
+      await loadShelves()
+      await loadBooks()
+      setMessage('Books arranged across shelves by copy count.')
+    } catch (e) {
+      setMessage(e.message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
   return <section className="panel admin-panel">
     <div className="panel-heading"><div><p className="eyebrow">Collection desk</p><h2>Book locations</h2></div><BookOpen size={20} color="#bc7651" /></div>
-    <div className="staff-book-list">{books.map(book => <div className="staff-book-row" key={book.id}><div className="row-info"><strong>{book.title}</strong><span>{book.author}</span></div><span className="shelf-label">{book.shelf_location || "Unassigned"} / {book.total_copies} copies</span><button type="button" onClick={() => setForm({ ...book })}>Edit shelf</button></div>)}</div>
+    <div className="staff-book-list">{books.map(book => {
+      const placedOn = shelves.filter(shelf => Number(shelf.placements?.[book.id]) > 0)
+      const location = placedOn.length ? placedOn.map(shelf => `${shelf.name} (${shelf.placements[book.id]})`).join(', ') : book.shelf_location || 'Unassigned'
+      return <div className="staff-book-row" key={book.id}><div className="row-info"><strong>{book.title}</strong><span>{book.author}</span></div><span className="shelf-label">{location} / {book.total_copies} copies</span><button type="button" onClick={() => setForm({ ...book })}>Edit shelf</button></div>
+    })}</div>
     <p className="eyebrow add-user-label">{form.id ? `Update shelf for ${form.title}` : 'Add a book'}</p>
     <form className="admin-form" onSubmit={submit}>
       <input placeholder="Shelf name or ID" value={form.shelf_location} onChange={e => setForm({ ...form, shelf_location: e.target.value })} />
@@ -356,19 +375,28 @@ function AdminBooks({ initialBooks }) {
     <div className="shelf-management">
       <div className="panel-heading shelf-heading"><div><p className="eyebrow">Physical shelves</p><h2>Create shelf</h2></div></div>
       <form className="admin-form shelf-form" onSubmit={createShelf}>
-        <input required placeholder="Shelf name or location (e.g. A-12)" value={shelfForm.name} onChange={e => setShelfForm({ ...shelfForm, name: e.target.value })} />
+        <input required maxLength="10" pattern="[A-Za-z]+" placeholder="Column (e.g. A)" value={shelfForm.column_name} onChange={e => setShelfForm({ ...shelfForm, column_name: e.target.value.toUpperCase() })} />
         <input required min="1" type="number" placeholder="Capacity" value={shelfForm.capacity} onChange={e => setShelfForm({ ...shelfForm, capacity: e.target.value })} />
-        <button disabled={busy} className="button button-dark">Create shelf <ArrowRight size={15} /></button>
+        <button disabled={busy} className="button button-dark">Add shelf <ArrowRight size={15} /></button>
       </form>
+      <p>New shelves are numbered automatically in their column, such as A-01, A-02.</p>
 
       <input aria-label="Search shelves" placeholder="Search shelf name or ID" value={shelfSearch} onChange={e => setShelfSearch(e.target.value)} />
       <p>{shelves.length} shelves. Showing up to 50 matching shelves.</p>
       <div className="shelf-list">
         {shelves.filter(shelf => shelf.name.toLowerCase().includes(shelfSearch.toLowerCase()) || String(shelf.id) === shelfSearch).slice(0, 50).map(shelf => <div className="shelf-row" key={shelf.id}>
-          <div className="row-info"><strong>{shelf.name}</strong><span>{shelf.assigned_copies} / {shelf.capacity} copies assigned</span></div>
+          <div className="row-info"><strong>{shelf.name}</strong><span>{shelf.assigned_copies} / {shelf.capacity} copies assigned</span>
+            <div className="shelf-contents">{Object.entries(shelf.placements || {}).map(([bookId, copies]) => {
+              const book = books.find(item => item.id === Number(bookId))
+              return book ? <span key={bookId}>{book.title}: {copies} {Number(copies) === 1 ? 'copy' : 'copies'}</span> : null
+            })}</div>
+          </div>
           <span className="role-badge">{shelf.remaining_capacity} remaining</span>
         </div>)}
       </div>
+
+      <button type="button" disabled={busy || books.length === 0 || shelves.length === 0} className="button button-dark" onClick={packShelves}>Arrange all books across shelves</button>
+      <p>Books are placed in collection order. A book’s copies can fill the end of one shelf and continue on the next.</p>
 
       <div className="panel-heading shelf-heading"><div><p className="eyebrow">Copy placement</p><h2>Assign books to shelves</h2></div></div>
       <form className="admin-form shelf-form" onSubmit={assignCopies}>

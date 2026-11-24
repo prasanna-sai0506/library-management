@@ -1,19 +1,21 @@
-from rest_framework import permissions, status
+from rest_framework import permissions, serializers, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from .models import User
 from .permissions import IsLibrarianOnly
 from librarymanagement.pagination import DefaultPagination
 from .serializers import UserProfileSerializer,UserRegistrationSerializer,UserSerializer
-
-
 class RegisterView(APIView):
     permission_classes = [permissions.AllowAny]
 
     def post(self, request):
         serializer = UserRegistrationSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        try:
+            serializer.is_valid(raise_exception=True)
+            user = serializer.save()
+        except serializers.ValidationError as exc:
+            return Response(exc.detail, status=status.HTTP_400_BAD_REQUEST)
+        return Response(UserRegistrationSerializer(user).data, status=status.HTTP_201_CREATED)
     
 # class UserProfileView(APIView):
 #     permission_classes = [permissions.IsAuthenticated]
@@ -43,14 +45,20 @@ class UserProfileView(APIView):
 
     def put(self, request):
         serializer = self.serializer_class(request.user,data=request.data)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
+        try:
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+        except serializers.ValidationError as exc:
+            return Response(exc.detail, status=status.HTTP_400_BAD_REQUEST)
         return Response(serializer.data)
 
     def patch(self, request):
         serializer = self.serializer_class(request.user,data=request.data,partial=True)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
+        try:
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+        except serializers.ValidationError as exc:
+            return Response(exc.detail, status=status.HTTP_400_BAD_REQUEST)
         return Response(serializer.data)
 
 class LibrarianCreateView(APIView):
@@ -58,8 +66,11 @@ class LibrarianCreateView(APIView):
 
     def post(self, request):
         serializer = UserRegistrationSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        serializer.save(role=User.LIBRARIAN)
+        try:
+            serializer.is_valid(raise_exception=True)
+            serializer.save(role=User.LIBRARIAN)
+        except serializers.ValidationError as exc:
+            return Response(exc.detail, status=status.HTTP_400_BAD_REQUEST)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 class UserListAPIView(APIView):

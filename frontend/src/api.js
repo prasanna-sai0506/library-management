@@ -39,6 +39,7 @@ export const api = {
   createBook: (data) => request('/library/books/', { method: 'POST', body: JSON.stringify(data) }),
   updateBook: (id, data) => request(`/library/books/?id=${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
   shelves: (query = '') => request(`/library/shelves/${query}`),
+  packShelves: () => request('/library/shelves/pack/', { method: 'POST' }),
   createShelf: (data) => request('/library/shelves/', { method: 'POST', body: JSON.stringify(data) }),
   updateShelf: (id, data) => request(`/library/shelves/?id=${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
   deleteShelf: (id) => request(`/library/shelves/?id=${id}`, { method: 'DELETE' }),

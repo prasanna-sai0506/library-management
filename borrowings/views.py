@@ -56,8 +56,11 @@ class BorrowingListCreateAPIView(APIView):
             book_errors = exc.detail.get('book') if isinstance(exc.detail, dict) else None
             if book_errors:
                 return Response({'error': str(book_errors[0])},status=status.HTTP_400_BAD_REQUEST)
-            raise
-        borrowing = serializer.save()
+            return Response(exc.detail, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            borrowing = serializer.save()
+        except serializers.ValidationError as exc:
+            return Response(exc.detail, status=status.HTTP_400_BAD_REQUEST)
         return Response(borrowing_data(borrowing, request),status=status.HTTP_201_CREATED)
 
 class BorrowingReturnAPIView(APIView):
@@ -117,34 +120,32 @@ class UnderDeskListAPIView(APIView):
 
     def get(self, request):
         copies = UnderDeskBook.objects.select_related(
-            'book',
-            'borrowing',
-            'borrowing__user',
+            'book',\
+            'borrowing',\
+            'borrowing__user',\
         ).order_by('placed_at')
 
         paginator = DefaultPagination()
         page = paginator.paginate_queryset(copies, request, view=self)
         data = [
             {
-                'id': copy.id,
-                'book': copy.book_id,
-                'title': copy.book.title,
-                'isbn': copy.book.isbn,
-                'borrower': copy.borrowing.user.username,
-                'borrowing': copy.borrowing_id,
+                'id': copy.id,\
+                'book': copy.book_id,\
+                'title': copy.book.title,\
+                'isbn': copy.book.isbn,\
+                'borrower': copy.borrowing.user.username,\
+                'borrowing': copy.borrowing_id,\
                 'placed_at': copy.placed_at,
             }
             for copy in page
         ]
         return paginator.get_paginated_response(data)
 
-
 def get_borrowing_from_query(request):
     borrowing_id = request.query_params.get('id')
     if not borrowing_id:
         return Response({'error': 'The id query parameter is required.'},status=status.HTTP_400_BAD_REQUEST)
     return get_object_or_404(Borrowing, id=borrowing_id)
-
 
 def borrowing_data(borrowings, request, many=False):
     return BorrowingSerializer(borrowings, many=many, context={'request': request}).data
