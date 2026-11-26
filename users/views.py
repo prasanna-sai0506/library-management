@@ -4,7 +4,13 @@ from rest_framework.views import APIView
 from .models import User
 from .permissions import IsLibrarianOnly
 from librarymanagement.pagination import DefaultPagination
-from .serializers import UserProfileSerializer,UserRegistrationSerializer,UserSerializer
+from .serializers import (
+    UserProfileSerializer,
+    UserRegistrationSerializer,
+    UserSerializer,
+)
+
+
 class RegisterView(APIView):
     permission_classes = [permissions.AllowAny]
 
@@ -15,8 +21,11 @@ class RegisterView(APIView):
             user = serializer.save()
         except serializers.ValidationError as exc:
             return Response(exc.detail, status=status.HTTP_400_BAD_REQUEST)
-        return Response(UserRegistrationSerializer(user).data, status=status.HTTP_201_CREATED)
-    
+        return Response(
+            UserRegistrationSerializer(user).data, status=status.HTTP_201_CREATED
+        )
+
+
 # class UserProfileView(APIView):
 #     permission_classes = [permissions.IsAuthenticated]
 
@@ -35,6 +44,7 @@ class RegisterView(APIView):
 #         serializer.save()
 #         return Response(serializer.data)
 
+
 class UserProfileView(APIView):
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = UserProfileSerializer
@@ -44,7 +54,7 @@ class UserProfileView(APIView):
         return Response(serializer.data)
 
     def put(self, request):
-        serializer = self.serializer_class(request.user,data=request.data)
+        serializer = self.serializer_class(request.user, data=request.data)
         try:
             serializer.is_valid(raise_exception=True)
             serializer.save()
@@ -53,13 +63,16 @@ class UserProfileView(APIView):
         return Response(serializer.data)
 
     def patch(self, request):
-        serializer = self.serializer_class(request.user,data=request.data,partial=True)
+        serializer = self.serializer_class(
+            request.user, data=request.data, partial=True
+        )
         try:
             serializer.is_valid(raise_exception=True)
             serializer.save()
         except serializers.ValidationError as exc:
             return Response(exc.detail, status=status.HTTP_400_BAD_REQUEST)
         return Response(serializer.data)
+
 
 class LibrarianCreateView(APIView):
     permission_classes = [IsLibrarianOnly]
@@ -73,13 +86,14 @@ class LibrarianCreateView(APIView):
             return Response(exc.detail, status=status.HTTP_400_BAD_REQUEST)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
+
 class UserListAPIView(APIView):
     permission_classes = [IsLibrarianOnly]
     serializer_class = UserSerializer
-    
+
     def get(self, request):
-        user_id = request.query_params.get('id')
-        users = User.objects.all().order_by('username')
+        user_id = request.query_params.get("id")
+        users = User.objects.all().order_by("username")
         if user_id:
             users = users.filter(id=user_id)
 
@@ -87,4 +101,3 @@ class UserListAPIView(APIView):
         page = paginator.paginate_queryset(users, request, view=self)
         serializer = self.serializer_class(page, many=True)
         return paginator.get_paginated_response(serializer.data)
-
